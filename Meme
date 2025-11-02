@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/4.1.0/turn.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MÈ MÉ - Câu khẩu ngữ dành cho người mới bắt đầu</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body {
+  font-family: "Segoe UI", sans-serif;
+  background-color: #fdf6e3;
+  min-height: 100vh;
+  margin:auto ;
+  justify-content: center; 
+  align-items: center;
+  overflow: hidden;
+}
+
+#flipbook-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#flipbook {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  transform-origin: top center;
+  transition: transform 0.3s ease-in-out;
+  width: 1000px;
+  height: 700px;
+}
+
+   .page {
+    background: #fff8e7;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    border-radius: 20px;
+    padding: 20px 30px;
+    display: grid; grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+    justify-content: space-between;
+  }
+
+  .left, .center, .right {
+    flex: 1 1 30%; /* mỗi cột chiếm khoảng 30% chiều rộng, tự co giãn */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .right {
+  position: relative;
+  width: 120px;
+  height: 650px;
+  margin-left: -50px;
+}
+
+.right img {
+  max-width: 80%;
+  height: auto;
+}
+
+  .left div {
+  background: #f9e7c4;
+  padding: 10px;
+  margin: 11px;
+  border-radius: 12px;
+  width: 550px;
+  height: 85px;
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* căn giữa theo chiều dọc */
+  text-align: left;        /* căn chữ sang trái */
+  line-height: 1.4;
+}
+
+  .target {
+    width: 100px;
+    height: 100px;
+    border: 3px dashed #bbb;
+    border-radius: 12px;
+    margin: 11px 0;
+    background-color: #fffef5;
+    transition: 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: all;
+  }
+
+  .target.drag-over {
+    border-color: #ffa726;
+    transform: scale(1.1);
+  }
+
+  .target.correct {
+    border-color: green;
+    background-color: #e6ffe6;
+  }
+
+  .draggable {
+    width: 90px;
+    height: 90px;
+    margin: 20px;
+    cursor: grab;
+    transition: transform 0.2s;
+  }
+
+  .draggable:active {
+    transform: scale(1.1);
+  }
+
+  .reset-btn {
+    position: absolute;
+    bottom: 2%;
+    right: -11%;
+    background: #ff9f43;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 20px;
+    z-index: 9999;
+  }
+
+  .reset-btn:hover {
+    background: #e67e22;
+  }
+
+  .nav-buttons {
+  position: absolute;
+  bottom: 50%;
+  right: -110px;
+  display: flex;
+  justify-content: center;
+  gap: 1150px;
+}
+
+  .arrow-btn {
+  background: #ff9f43;
+  border: none;
+  color: white;
+  font-size: 30px;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  bottom: 50%;
+  cursor: pointer;
+}
+
+  .arrow-btn:hover {
+    background: #e67e22;
+  }
+
+  .snap-btn {
+  position: absolute;
+  bottom: 8%;
+  right: -12.25%;   /* hoặc right: 5%; tuỳ bạn muốn nằm bên trái hay phải */
+  background: #19bd31;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 5px 5px;
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 9999;
+  transition: background 0.3s;
+}
+
+.snap-btn:hover {
+  background: #0e813c;
+}
+
+
+  .page-number {
+  position: absolute;
+  bottom: 3%;
+  right: 3%;
+  font-size: 14px;
+    color: #555;
+  }
+
+ .fullscreen-btn {
+  position: absolute;
+  top: 3%;
+  right: -6%;
+  background: #ff9f43;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 5px 10px;     /* dùng đơn vị viewport để co duỗi */
+  font-size: 150%;   /* chữ cũng co theo màn hình */
+  cursor: pointer;
+  z-index: 10000;
+  transition: background 0.3s, transform 0.2s;
+ }
+
+ .fullscreen-btn:hover {
+  background: #e67e22;
+  transform: scale(1.05);
+ }
+
+ .fullscreen-btn {
+  display: none;
+ }
+ 
+
+/* === FIX CHO ĐIỆN THOẠI (KHÔNG ẢNH HƯỞNG MÁY TÍNH) === */
+@media (max-width: 1024px) {
+  #flipbook {
+    transform-origin: top center;
+  }
+  .fullscreen-btn {
+    display: block;
+  }
+}
+
+
+  /* Hiệu ứng lật sách */
+  #flipbook {
+    position: relative;
+  }
+
+  .page {
+  display: none;
+}
+
+.page.active {
+  display: grid;
+}
+
+/* ===== CẢNH BÁO XOAY MÀN HÌNH ===== */
+#orientationNotice {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000; /* nền đen toàn màn hình */
+  color: #fff; /* chữ trắng */
+  font-size: 22px;
+  font-weight: 600;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  transform: translateX(-28px);
+  z-index: 999999;
+  padding: 20px;
+}
+
+/* Làm mờ & khóa thao tác khi đang dọc */
+.disabled {
+  pointer-events: none;
+  filter: blur(5px);
+  opacity: 0.6;
+}
+
+</style>
+</head>
+<body>
+ <div id="app"></div>
+  
+    <div id="flipbook">
+
+         <!-- Trang 1 -->
+<div class="page">
+  <div class="left">
+    <div>同屋给你买菜，你想感谢他。<br>→ Bạn cùng phòng mua đồ ăn cho. Bạn muốn cảm ơn. <br>买菜 [mǎi cài]: mua đồ ăn</div>
+    <div>你摔倒，A扶你起来但再走几步，他也摔了。<br>→ A cười bạn bị ngã nhưng đi thêm vài bước A cũng ngã rồi. <br>摔倒 [shuāidǎo]: ngã, bị té</div>
+    <div>你要嫌弃小宋玩游戏玩得太差了。<br>→ Bạn muốn chê Tiểu Tống chơi game kém. <br>嫌弃 [xiánqì]: chê bai</div>
+    <div>A问你考试成绩但你不想提到这个主题。<br>→ A hỏi bạn điểm bài thi nhưng bạn không muốn nhắc đến. <br>提到 [tí dào]: nhắc đến</div>
+    <div>好朋友突然从黑暗里跳出来吓你。<br>→ Bạn thân đột nhiên từ trong bóng tối nhảy ra dọa bạn. <br>黑暗 [hēi'àn]: bóng tối</div>
+  </div>
+
+  <div class="center">
+    <div class="target" id="target1"></div>
+    <div class="target" id="target2"></div>
+    <div class="target" id="target3"></div>
+    <div class="target" id="target4"></div>
+    <div class="target" id="target5"></div>
+  </div>
+
+  <div class="right">
+    <img src="https://i.postimg.cc/wBLqmtJr/q.png" class="draggable" id="pic1" draggable="true" data-target="target1">
+    <img src="https://i.postimg.cc/J0P4z9Jj/22.png" class="draggable" id="pic2" draggable="true" data-target="target2">
+    <img src="https://i.postimg.cc/JnQRp9pF/28.png" class="draggable" id="pic3" draggable="true" data-target="target3">
+    <img src="https://i.postimg.cc/9FgQ5Hch/Meme.png" class="draggable" id="pic4" draggable="true" data-target="target4">
+    <img src="https://i.postimg.cc/15Qpn6qd/Screenshot-2025-10-29-115416.png" class="draggable" id="pic5" draggable="true" data-target="target5">
+  </div>
+</div>
+
+<button class="reset-btn" onclick="resetPage1()">🔁 Reset</button>
+
+<!-- Trang 2 -->
+  <div class="page">
+    <div class="left">
+      <div>在课堂你尽量忍着不笑，结果笑声更大。<br>→ Trong lớp bạn cố nhịn cười, kết quả tiếng cười càng to hơn.<br>尽量 [jǐnliàng]: cố gắng hết sức</div>
+      <div>你本来想早睡，却点开了一条抖音视频。<br>→ Ban đầu bạn định ngủ sớm, lại mở 1 video Douyin.<br>抖音 [Dǒuyīn]: Douyin</div>
+      <div>爸妈在亲戚面前问你：“有对象了吗?”。<br>→ Trước mặt họ hàng bố mẹ hỏi bạn có người yêu chưa.<br>亲戚[qīnqi]: họ hàng</div>
+      <div>你以为朋友请客，结果到店里还要AA制。<br>→ Tưởng bạn mời, đến nơi vẫn phải chia tiền.<br>AA制 [AA zhì]: chia tiền</div>
+      <div>游戏快赢的时候，网络突然卡住。<br>→ Lúc game sắp thắng thì mạng đột nhiên lag.<br>卡 [kǎ]: lag</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page2"></div>
+      <div class="target" id="target2_page2"></div>
+      <div class="target" id="target3_page2"></div>
+      <div class="target" id="target4_page2"></div>
+      <div class="target" id="target5_page2"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/3wmfsqkJ/3.png" class="draggable" id="pic1_page2" data-target="target1_page2" style="top:-5px;">
+      <img src="https://i.postimg.cc/Gt7XPw5M/Meme-4.png" class="draggable" id="pic2_page2" data-target="target2_page2" style="top:120px;">
+      <img src="https://i.postimg.cc/Z5ywNQFg/Meme-1.png" class="draggable" id="pic3_page2" data-target="target3_page2" style="top:250px;">
+      <img src="https://i.postimg.cc/cJyXBcFy/111.png" class="draggable" id="pic4_page2" data-target="target4_page2" style="top:380px;">
+      <img src="https://i.postimg.cc/rmqjvwX2/5.png" class="draggable" id="pic5_page2" data-target="target5_page2" style="top:506px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage2()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 3 -->
+  <div class="page">
+    <div class="left">
+      <div>拍合照时，全班只有你闭着眼睛。<br>→ Khi chụp ảnh tập thể, chỉ có bạn nhắm mắt. <br>闭 [bì]: nhắm (mắt)</div>
+      <div>十五分钟的测验，你两分钟就做完了。<br>→ Bài kiểm tra 15 phút, bạn làm xong trong 2 phút.<br>测验 [cèyàn]: bài kiểm tra</div>
+      <div>被好朋友艾特在一条“有点暗示”的动态里。<br>→ Bị bạn thân tag vào một status “có chút ám chỉ”.<br>艾特 [àitè]: tag      暗示 [ànshì]: ám chỉ</div>
+      <div>老师说这个问题一定会考，可你还没学。<br>→ Thầy bảo câu này chắc chắn sẽ thi, nhưng bạn chưa học. <br>问题 [wèntí]: câu hỏi</div>
+      <div>王霖听不懂外国人的话但还骄傲地说他懂。<br>→ Vương Lâm nghe không hiểu lời người ngoại quốc nhưng vẫn kiêu ngạo nói rằng hiểu.<br>骄傲 [jiāo’ào]: kiêu ngạo</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page3"></div>
+      <div class="target" id="target2_page3"></div>
+      <div class="target" id="target3_page3"></div>
+      <div class="target" id="target4_page3"></div>
+      <div class="target" id="target5_page3"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/52cCZgVp/Meme-5.png" class="draggable" id="pic1_page3" data-target="target1_page3" style="top:-5px;">
+      <img src="https://i.postimg.cc/pdWpH11z/Screenshot-2025-10-16-200129.png" class="draggable" id="pic2_page3" data-target="target2_page3" style="top:120px;">
+      <img src="https://i.postimg.cc/qBSQQWmJ/Screenshot-2025-10-20-214356.png" class="draggable" id="pic3_page3" data-target="target3_page3" style="top:250px;">
+      <img src="https://i.postimg.cc/qvdwHyVY/Meme-3.png" class="draggable" id="pic4_page3" data-target="target4_page3" style="top:380px;">
+      <img src="https://i.postimg.cc/s2jJvz2W/Screenshot-2025-10-29-092216.png" class="draggable" id="pic5_page3" data-target="target5_page3" style="top:506px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage3()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 4 -->
+  <div class="page">
+    <div class="left">
+      <div>朋友说要买彩票，一夜暴富后就不用上班了。<br>→ Bạn bè nói muốn mua vé số, giàu sau một đêm 
+thì không cần phải đi làm nữa. <br>一夜暴富 [yī yè bào fù]: giàu lên chỉ sau một đêm</div>
+      <div>游戏里你朋友操作拉跨。<br>→ Trong game thao tác của bạn bè rất tệ.<br>拉跨 [lā kuà]: yếu kém, tệ</div>
+      <div>朋友说一些非常油腻的话，你要他别说了。<br>→ Bạn bè nói mấy câu cực kỳ sến súa, bạn muốn họ dừng lại.<br>油腻 [yóunì]: sến súa</div>
+      <div>你看到朋友追剧追到很晚。<br>→ Bạn thấy bạn bè cày phim đến tối muộn. <br>追剧 [zhuī jù]: cày phim</div>
+      <div>小伙伴拍照修图修得多了。<br>→ Bạn nhỏ chụp ảnh chỉnh sửa quá đà.<br>修图 [xiū tú]: chỉnh sửa ảnh</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page4"></div>
+      <div class="target" id="target2_page4"></div>
+      <div class="target" id="target3_page4"></div>
+      <div class="target" id="target4_page4"></div>
+      <div class="target" id="target5_page4"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/1zPT9b6R/20.png" class="draggable" id="pic1_page4" data-target="target1_page4" style="top:120px;">
+      <img src="https://i.postimg.cc/SQBbBTZV/Meme-6.png" class="draggable" id="pic2_page4" data-target="target2_page4" style="top:250px;">
+      <img src="https://i.postimg.cc/6qRg6KHW/Screenshot-2025-10-18-234610.png" class="draggable" id="pic3_page4" data-target="target3_page4" style="top:506px;">
+      <img src="https://i.postimg.cc/Yq6ZJpLS/Meme-8.png" class="draggable" id="pic4_page4" data-target="target4_page4" style="top:-5px;">
+      <img src="https://i.postimg.cc/6qsbmS9x/21.png" class="draggable" id="pic5_page4" data-target="target5_page4" style="top:380px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage4()">🔁 Reset</button>
+  </div>
+
+  <!-- Trang 5 -->
+  <div class="page">
+    <div class="left">
+      <div>有人帮你一个忙。你对他很感谢。<br>→ Có người giúp bạn một việc. Bạn rất cảm kích anh ấy.<br>感谢 [gǎnxiè]: cảm ơn</div>
+      <div>小李要参加采访了，有点紧张，你鼓励她。<br>→ Tiểu Lý sắp phỏng vấn, khá căng thẳng, bạn an ủi cô ấy.<br>采访 [cǎifǎng]：phỏng vấn</div>
+      <div>你弄坏朋友的衣服。<br>→ Bạn làm hỏng áo của bạn bè.<br>弄坏 [nòng huài]: làm hỏng</div>
+      <div>你跟别人打招呼。<br>→ Bạn chào hỏi người khác. <br>打招呼 [dǎ zhāohu]: chào hỏi</div>
+      <div>离开时，你想说再见。<br>→ Bạn muốn nói lời tạm biệt lúc rời đi.<br>离开 [líkāi]: rời đi</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page5"></div>
+      <div class="target" id="target2_page5"></div>
+      <div class="target" id="target3_page5"></div>
+      <div class="target" id="target4_page5"></div>
+      <div class="target" id="target5_page5"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/9fvFLGnZ/7.png" class="draggable" id="pic1_page5" data-target="target1_page5" style="top:250px;">
+      <img src="https://i.postimg.cc/ZRt48JWp/t.png" class="draggable" id="pic2_page5" data-target="target2_page5" style="top:120px;">
+      <img src="https://i.postimg.cc/C5w02JH7/Screenshot-2025-10-20-220748.png" class="draggable" id="pic3_page5" data-target="target3_page5" style="top:380px;">
+      <img src="https://i.postimg.cc/7YYDMsLk/10.png" class="draggable" id="pic4_page5" data-target="target4_page5" style="top:506px;">
+      <img src="https://i.postimg.cc/pXGv0f9Q/Screenshot-2025-10-23-132027.png" class="draggable" id="pic5_page5" data-target="target5_page5" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage5()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 6 -->
+  <div class="page">
+    <div class="left">
+      <div>你达成协议。<br>→ Bạn đạt được thỏa thuận.<br>协议 [xiéyi]: thỏa thuận</div>
+      <div>你想帮朋友拿东西。<br>→ Bạn muốn giúp bạn bè cầm đồ.<br>拿东西 [ná dōngxi]: cầm đồ</div>
+      <div>你想请朋友吃一顿饭。<br>→ Bạn muốn mời bạn bè ăn một bữa cơm.<br>朋友 [péng you]: bạn bè</div>
+      <div>你正在吃晚饭，有朋友来访。<br>→ Bạn đang ăn cơm tối, có bạn đến chơi.<br>来访 [lái fǎng]: đến thăm</div>
+      <div>朋友来家里玩以后，你送他回去。<br>→ Tiễn bạn bè ra về sau khi đến nhà chơi.<br>送 [sòng]: tiễn</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page6"></div>
+      <div class="target" id="target2_page6"></div>
+      <div class="target" id="target3_page6"></div>
+      <div class="target" id="target4_page6"></div>
+      <div class="target" id="target5_page6"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/pVgVxYVM/31.png" class="draggable" id="pic1_page6" data-target="target1_page6" style="top:250px;">
+      <img src="https://i.postimg.cc/zGvxjWW1/Screenshot-2025-11-01-235523.png" class="draggable" id="pic2_page6" data-target="target2_page6" style="top:120px;">
+      <img src="https://i.postimg.cc/rsy1pXNq/Screenshot-2025-11-01-235654.png" class="draggable" id="pic3_page6" data-target="target3_page6" style="top:380px;">
+      <img src="https://i.postimg.cc/260q2qnm/Screenshot-2025-11-01-235807.png" class="draggable" id="pic4_page6" data-target="target4_page6" style="top:506px;">
+      <img src="https://i.postimg.cc/SQX8Dr11/Screenshot-2025-11-01-235851.png" class="draggable" id="pic5_page6" data-target="target5_page6" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage6()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 7 -->
+  <div class="page">
+    <div class="left">
+      <div>你和朋友约好一起吃饭。<br>→ Bạn hẹn bạn đi ăn cơm cùng nhau.<br>约好 [yuē hǎo]: hẹn trước</div>
+      <div>你想点菜，但没有看到服务员。<br>→ Bạn muốn gọi món nhưng không thấy nhân viên. <br>点菜 [diǎn cài]: gọi món</div>
+      <div>朋友给你发短信问: “在吗?”。<br>→ Bạn bè nhắn tin hỏi: “Ở đó không?”.<br>短信 [duǎnxìn]: tin nhắn</div>
+      <div>你在街上碰到多年没见的朋友。<br>→ Bạn gặp lại người bạn lâu năm trên đường.<br>街上 [jiē shang]: trên đường</div>
+      <div>你在公共汽车上想给老人让座。<br>→ Bạn ở trên xe bus muốn nhường chỗ cho người già.<br>公共汽车 [gōnggòng qìchē]: xe bus</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page7"></div>
+      <div class="target" id="target2_page7"></div>
+      <div class="target" id="target3_page7"></div>
+      <div class="target" id="target4_page7"></div>
+      <div class="target" id="target5_page7"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/W3V7zysM/Screenshot-2025-11-02-094015.png" class="draggable" id="pic1_page7" data-target="target1_page7" style="top:250px;">
+      <img src="https://i.postimg.cc/rp1SB95j/Screenshot-2025-11-02-094136.png" class="draggable" id="pic2_page7" data-target="target2_page7" style="top:120px;">
+      <img src="https://i.postimg.cc/wjJJNkfS/Screenshot-2025-11-02-094215.png" class="draggable" id="pic3_page7" data-target="target3_page7" style="top:380px;">
+      <img src="https://i.postimg.cc/c436kLRm/51.png" class="draggable" id="pic4_page7" data-target="target4_page7" style="top:506px;">
+      <img src="https://i.postimg.cc/c43cSYyC/44.png" class="draggable" id="pic5_page7" data-target="target5_page7" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage7()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 8 -->
+  <div class="page">
+    <div class="left">
+      <div>同事帮你搬东西。<br>→ Đồng nghiệp giúp bạn chuyển đồ.<br>同事 [tóngshì]: đồng nghiệp</div>
+      <div>经过讨论，大家终于决定好出去玩的时间。<br>→ Sau khi thảo luận, mọi người cuối cùng cũng quyết định được thời gian đi chơi.<br>讨论 [tǎolùn]: thảo luận</div>
+      <div>你约好和朋友见面，他到了。<br>→ Bạn hẹn bạn đi gặp nhau, bạn của bạn đến rồi.<br>约好 [yuēhǎo]: hẹn </div>
+      <div>有人跟你打招呼，但你一时想不起来他是谁。<br>→ Có người chào bạn, nhưng bạn không nhớ ra người đó.<br>打招呼 [dǎ zhāohu]: chào hỏi</div>
+      <div>你去别人家做客，临走时。<br>→ Bạn đến nhà người khác làm khách, lúc sắp về.<br>做客 [zuò kè]: làm khách</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page8"></div>
+      <div class="target" id="target2_page8"></div>
+      <div class="target" id="target3_page8"></div>
+      <div class="target" id="target4_page8"></div>
+      <div class="target" id="target5_page8"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/h4LjRPZh/Screenshot-2025-11-02-095103.png" class="draggable" id="pic1_page8" data-target="target1_page8" style="top:250px;">
+      <img src="https://i.postimg.cc/k4ykwZsy/Screenshot-2025-11-02-095416.png" class="draggable" id="pic2_page8" data-target="target2_page8" style="top:120px;">
+      <img src="https://i.postimg.cc/tg3fCfKz/Screenshot-2025-11-02-095453.png" class="draggable" id="pic3_page8" data-target="target3_page8" style="top:380px;">
+      <img src="https://i.postimg.cc/rwWZQ3F5/Screenshot-2025-11-02-095600.png" class="draggable" id="pic4_page8" data-target="target4_page8" style="top:506px;">
+      <img src="https://i.postimg.cc/GtHqYS5X/Screenshot-2025-11-02-095655.png" class="draggable" id="pic5_page8" data-target="target5_page8" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage8()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 9 -->
+  <div class="page">
+    <div class="left">
+      <div>你今天买东西被坑了，感觉人生太倒霉了。<br>→ Hôm nay bạn đi mua đồ mà bị lừa, cảm thấy cuộc đời thật xui xẻo.<br>被坑 [bèi kēng]: bị lừa</div>
+      <div>你是上班族，工作太多让你觉得生活真苦。<br>→ Bạn là dân công sở, việc quá nhiều khiến bạn cảm thấy đời thật khổ.<br>上班族 [shàngbānzú]: dân công sở, người đi làm</div>
+      <div>你好奇对方在干什么。<br>→ Bạn muốn hỏi đối phương đang làm gì.<br>对方 [duìfāng]: đối phương</div>
+      <div>被别人误会，你委屈了。<br>→ Bị người khác hiểu lầm, bạn cảm thấy tủi thân.<br>委屈 [wěiqu]: uất ức</div>
+      <div>你在期末考试中得了满分，你很开心。<br>→ Bạn đạt điểm tuyệt đối trong bài thi cuối kỳ, bạn rất vui.<br>满分 [mǎn fēn]: điểm tuyệt đối</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page9"></div>
+      <div class="target" id="target2_page9"></div>
+      <div class="target" id="target3_page9"></div>
+      <div class="target" id="target4_page9"></div>
+      <div class="target" id="target5_page9"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/XYjSBngq/Screenshot-2025-11-02-102111.png" class="draggable" id="pic1_page9" data-target="target1_page9" style="top:250px;">
+      <img src="https://i.postimg.cc/ZntXbmRN/Screenshot-2025-11-02-102212.png" class="draggable" id="pic2_page9" data-target="target2_page9" style="top:120px;">
+      <img src="https://i.postimg.cc/wjTZT06N/Screenshot-2025-11-02-102301.png" class="draggable" id="pic3_page9" data-target="target3_page9" style="top:380px;">
+      <img src="https://i.postimg.cc/bYxBxKrM/Screenshot-2025-11-02-102356.png" class="draggable" id="pic4_page9" data-target="target4_page9" style="top:506px;">
+      <img src="https://i.postimg.cc/xdNscZBL/Screenshot-2025-11-02-102442.png" class="draggable" id="pic5_page9" data-target="target5_page9" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage9()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 10 -->
+  <div class="page">
+    <div class="left">
+      <div>你觉得别人太过分了。<br>→ Bạn cảm thấy người khác quá đáng.<br>过分 [guòfèn]: quá đáng</div>
+      <div>你以为今天放假，结果还要去上学。<br>→ Bạn tưởng hôm nay được nghỉ, ai ngờ vẫn phải đi học.<br>放假 [fàngjià]: nghỉ</div>
+      <div>你打开钱包但只看到一张一块钱。<br>→ Bạn mở ví ra nhưng chỉ thấy một tờ 1 tệ.<br>钱包 [qiánbāo]: ví tiền</div>
+      <div>全班都在笑，可你完全不懂发生了什么。<br>→ Cả lớp đang cười, nhưng bạn không hiểu có chuyện gì.<br>全班 [quánbān]: cả lớp</div>
+      <div>收到考试成绩，你的心情低落因为考得不好。<br>→ Nhận kết quả thi, tâm trạng bạn sa sút vì thi không tốt.<br>低落 [dīluò]: sa sút</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page10"></div>
+      <div class="target" id="target2_page10"></div>
+      <div class="target" id="target3_page10"></div>
+      <div class="target" id="target4_page10"></div>
+      <div class="target" id="target5_page10"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/fk4WQ14c/35.png" class="draggable" id="pic1_page10" data-target="target1_page10" style="top:250px;">
+      <img src="https://i.postimg.cc/6qZ2Zrtn/Screenshot-2025-11-02-103330.png" class="draggable" id="pic2_page10" data-target="target2_page10" style="top:120px;">
+      <img src="https://i.postimg.cc/YCR4QqBH/Screenshot-2025-11-02-103429.png" class="draggable" id="pic3_page10" data-target="target3_page10" style="top:380px;">
+      <img src="https://i.postimg.cc/LshsftVn/Screenshot-2025-11-02-103535.png" class="draggable" id="pic4_page10" data-target="target4_page10" style="top:506px;">
+      <img src="https://i.postimg.cc/9FpXn88K/Screenshot-2025-11-02-103648.png" class="draggable" id="pic5_page10" data-target="target5_page10" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage10()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 11 -->
+  <div class="page">
+    <div class="left">
+      <div>你和你的朋友吵架。<br>→ Bạn cãi nhau với người bạn của mình. <br>吵架 [chǎojià]: cãi nhau</div>
+      <div>你朋友遇到困难, 你想安慰她。<br>→ Bạn bè gặp khó khăn, bạn muốn an ủi cô ấy.<br>安慰 [ānwèi]: an ủi</div>
+      <div>你妈妈出门之前叮嘱你做家务，但你忘了。<br>→ Mẹ dặn bạn làm việc nhà trước khi đi, nhưng bạn quên mất.<br>叮嘱 [dīngzhǔ]: dặn dò</div>
+      <div>你听说一个你很讨厌的同学考了全班第一。<br>→ Bạn nghe nói đứa cùng lớp mà bạn rất ghét lại đứng nhất lớp.<br>讨厌 [tǎoyàn]: ghét</div>
+      <div>你在班级群里发了消息，但没人回复你。<br>→ Bạn nhắn tin vào nhóm lớp nhưng không ai thèm trả lời. <br>班级群 [bānjí qún]: nhóm lớp</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page11"></div>
+      <div class="target" id="target2_page11"></div>
+      <div class="target" id="target3_page11"></div>
+      <div class="target" id="target4_page11"></div>
+      <div class="target" id="target5_page11"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/285gC0j7/Screenshot-2025-11-02-104219.png" class="draggable" id="pic1_page11" data-target="target1_page11" style="top:250px;">
+      <img src="https://i.postimg.cc/vBzSsVJR/Screenshot-2025-11-02-104254.png" class="draggable" id="pic2_page11" data-target="target2_page11" style="top:120px;">
+      <img src="https://i.postimg.cc/yY5psBr5/Screenshot-2025-11-02-104348.png" class="draggable" id="pic3_page11" data-target="target3_page11" style="top:380px;">
+      <img src="https://i.postimg.cc/BZzB1pcg/Screenshot-2025-11-02-104729.png" class="draggable" id="pic4_page11" data-target="target4_page11" style="top:506px;">
+      <img src="https://i.postimg.cc/DwkQxzNc/34.png" class="draggable" id="pic5_page11" data-target="target5_page11" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage11()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 12 -->
+  <div class="page">
+    <div class="left">
+      <div>妈妈发现你的不能说的秘密。<br>→ Mẹ phát hiện ra bí mật không thể nói của bạn.<br>秘密 [mìmì]: bí mật</div>
+      <div>刚被妈妈打了一顿，然后你又被她叫来吃饭。<br>→ Vừa bị mẹ đánh một trận, rồi bạn lại bị mẹ gọi xuống ăn cơm.<br>打一顿 [dǎ yí dùn]: đánh 1 trận</div>
+      <div>第一次见到一个人，你被他的外表吸引住。<br>→ Lần đầu gặp một người, bạn bị ấn tượng với vẻ bề ngoài của họ.<br>外表 [wài biǎo]: vẻ bề ngoài</div>
+      <div>你早上睡过头，赶紧跑去上课。<br>→ Buổi sáng ngủ quên, bạn vội vàng chạy đi học.<br>睡过头 [shuì guòtóu]: ngủ quên</div>
+      <div>进入你头的消息太多了。<br>→ Thông tin mà bạn phải tiếp nhận quá nhiều. <br>消息 [xiāoxi]: thông tin</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page12"></div>
+      <div class="target" id="target2_page12"></div>
+      <div class="target" id="target3_page12"></div>
+      <div class="target" id="target4_page12"></div>
+      <div class="target" id="target5_page12"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/3wDdVj0P/Screenshot-2025-11-02-105553.png" class="draggable" id="pic1_page12" data-target="target1_page12" style="top:250px;">
+      <img src="https://i.postimg.cc/W3vbyBvk/Screenshot-2025-11-02-105730.png" class="draggable" id="pic2_page12" data-target="target2_page12" style="top:120px;">
+      <img src="https://i.postimg.cc/qBQMmDZm/Screenshot-2025-11-02-105814.png" class="draggable" id="pic3_page12" data-target="target3_page12" style="top:380px;">
+      <img src="https://i.postimg.cc/BZzB1pcg/Screenshot-2025-11-02-104729.png" class="draggable" id="pic4_page12" data-target="target4_page12" style="top:506px;">
+      <img src="https://i.postimg.cc/Xvwn9sCC/Screenshot-2025-11-02-105857.png" class="draggable" id="pic5_page12" data-target="target5_page12" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage12()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 13 -->
+  <div class="page">
+    <div class="left">
+      <div>同学在台上演讲得很流利。<br>→ Bạn học phát biểu trên sân khấu rất lưu loát.<br>流利 [liúlì]: lưu loát</div>
+      <div>好朋友画了一幅特别美的画。<br>→ Bạn thân bạn vẽ một bức tranh rất đẹp.<br>画 [huà]: vẽ</div>
+      <div>你看到同桌字写得很好看。<br>→ Bạn thấy chữ của bạn cùng bàn viết rất đẹp. <br>好看 [hǎokàn]: đẹp</div>
+      <div>在运动会你即将到达终点线。<br>→ Bạn sắp chạy tới đích trong đại hội thể thao.<br>运动会 [yùndònghuì]: đại hội thể thao</div>
+      <div>你同学吉他弹得很好听。<br>→ Bạn học đánh đàn guitar rất hay. <br>弹 [tán]: đánh, chơi (nhạc cụ)</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page13"></div>
+      <div class="target" id="target2_page13"></div>
+      <div class="target" id="target3_page13"></div>
+      <div class="target" id="target4_page13"></div>
+      <div class="target" id="target5_page13"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/BbjyBvzW/Screenshot-2025-11-02-110311.png" class="draggable" id="pic1_page13" data-target="target1_page13" style="top:250px;">
+      <img src="https://i.postimg.cc/TPQ48m8B/Screenshot-2025-11-02-110414.png" class="draggable" id="pic2_page13" data-target="target2_page13" style="top:120px;">
+      <img src="https://i.postimg.cc/DZMp0Twt/13.png" class="draggable" id="pic3_page13" data-target="target3_page13" style="top:380px;">
+      <img src="https://i.postimg.cc/kXKC0jTs/Screenshot-2025-11-02-110527.png" class="draggable" id="pic4_page13" data-target="target4_page13" style="top:506px;">
+      <img src="https://i.postimg.cc/hGPq7KcM/15.png" class="draggable" id="pic5_page13" data-target="target5_page13" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage13()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 14 -->
+  <div class="page">
+    <div class="left">
+      <div>朋友做的饭很好吃，你想多吃一点。<br>→ Cơm bạn nấu rất ngon, bạn muốn ăn nhiều thêm chút.<br>饭 [fàn]: cơm/đồ ăn</div>
+      <div>你看到朋友穿了一身新衣服。<br>→ Bạn thấy bạn thân mặc một bộ quần áo mới.<br>穿 [chuān]: mặc</div>
+      <div>同学回答问题特别精彩。<br>→ Bạn học trả lời câu hỏi rất xuất sắc. <br>精彩 [jīngcǎi]: xuất sắc</div>
+      <div>小伙伴的舞蹈动作很整齐。<br>→ Động tác nhảy của các bạn nhỏ rất đều. <br>整齐 [zhěngqí]: đều</div>
+      <div>朋友英语说得很标准。<br>→ Bạn thân nói tiếng anh cực chuẩn. <br>标准 [biāozhǔn]: tiêu chuẩn</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page14"></div>
+      <div class="target" id="target2_page14"></div>
+      <div class="target" id="target3_page14"></div>
+      <div class="target" id="target4_page14"></div>
+      <div class="target" id="target5_page14"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/DwGSYdGJ/Screenshot-2025-11-02-111051.png" class="draggable" id="pic1_page14" data-target="target1_page14" style="top:250px;">
+      <img src="https://i.postimg.cc/2SW1XFWq/Screenshot-2025-11-02-111138.png" class="draggable" id="pic2_page14" data-target="target2_page14" style="top:120px;">
+      <img src="https://i.postimg.cc/0ySzHdSz/Screenshot-2025-11-02-111205.png" class="draggable" id="pic3_page14" data-target="target3_page14" style="top:380px;">
+      <img src="https://i.postimg.cc/P5DCFzDN/Screenshot-2025-11-02-111227.png" class="draggable" id="pic4_page14" data-target="target4_page14" style="top:506px;">
+      <img src="https://i.postimg.cc/vZn4SLnB/Screenshot-2025-11-02-111255.png" class="draggable" id="pic5_page14" data-target="target5_page14" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage14()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 15 -->
+  <div class="page">
+    <div class="left">
+      <div>好朋友发了一张很好看的自拍，让你惊呆了。<br>→ Bạn thân đăng ảnh selfie rất đẹp, khiến bạn sững người.<br>惊呆 [jīng dāi]: sững sờ</div>
+      <div>他画的板书特别工整。<br>→ Bảng chữ cậu ấy viết rất ngay ngắn. <br>工整 [gōngzhěng]: ngay ngắn</div>
+      <div>同学帮你解决了一道难题。<br>→ Bạn học giúp bạn giải quyết một bài khó. <br>解决 [jiějué]: giải quyết</div>
+      <div>朋友的歌声很好听。<br>→ Giọng hát của bạn thân rất hay. <br>歌声 [gēshēng]: giọng hát</div>
+      <div>小组讨论时，他的点子特别好。<br>→ Trong thảo luận nhóm, ý tưởng của cậu ấy rất hay. <br>点子 [diǎnzi]: ý tưởng</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page15"></div>
+      <div class="target" id="target2_page15"></div>
+      <div class="target" id="target3_page15"></div>
+      <div class="target" id="target4_page15"></div>
+      <div class="target" id="target5_page15"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/xT2j1DJh/Screenshot-2025-11-02-111743.png" class="draggable" id="pic1_page15" data-target="target1_page15" style="top:250px;">
+      <img src="https://i.postimg.cc/YC2pQ6xR/Screenshot-2025-11-02-111812.png" class="draggable" id="pic2_page15" data-target="target2_page15" style="top:120px;">
+      <img src="https://i.postimg.cc/VksYXqF3/Screenshot-2025-11-02-111839.png" class="draggable" id="pic3_page15" data-target="target3_page15" style="top:380px;">
+      <img src="https://i.postimg.cc/YCXtRvnt/Screenshot-2025-11-02-111859.png" class="draggable" id="pic4_page15" data-target="target4_page15" style="top:506px;">
+      <img src="https://i.postimg.cc/BnhJpjYj/Screenshot-2025-11-02-111921.png" class="draggable" id="pic5_page15" data-target="target5_page15" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage15()">🔁 Reset</button>
+  </div>
+
+<!-- Trang 16 -->
+  <div class="page">
+    <div class="left">
+      <div>小队友提前完成任务，还做得非常好。<br>→ Bạn cùng nhóm hoàn thành sớm và rất tốt.<br>完成 [wánchéng]: hoàn thành</div>
+      <div>你看见朋友房间里的东西被摆得非常整齐。<br>→ Bạn nhìn thấy đồ đạc trong phòng của bạn mình được bày rất gọn gàng. <br>整齐 [zhěngqí]: gọn gàng</div>
+      <div>你跟朋友玩一个游戏，觉得太好玩了。<br>→ Bạn chơi game với bạn thân, cảm thấy quá vui. <br>游戏 [yóuxì]: trò chơi</div>
+      <div>同学三秒钟就算出了答案。<br>→ Bạn học chỉ mất 3 giây đã tính ra đáp án. <br>答案 [dá’àn]: đáp án</div>
+      <div>朋友画的海报特别有创意。<br>→ Áp phích bạn vẽ ra rất sáng tạo. <br>海报 [hǎibào]: áp phích</div>
+    </div>
+
+    <div class="center">
+      <div class="target" id="target1_page16"></div>
+      <div class="target" id="target2_page16"></div>
+      <div class="target" id="target3_page16"></div>
+      <div class="target" id="target4_page16"></div>
+      <div class="target" id="target5_page16"></div>
+    </div>
+
+    <div class="right">
+      <img src="https://i.postimg.cc/sXrHZcY3/Screenshot-2025-11-02-112400.png" class="draggable" id="pic1_page16" data-target="target1_page16" style="top:250px;">
+      <img src="https://i.postimg.cc/zBFtwg7g/Screenshot-2025-11-02-112425.png" class="draggable" id="pic2_page16" data-target="target2_page16" style="top:120px;">
+      <img src="https://i.postimg.cc/76ns1299/Screenshot-2025-11-02-112519.png" class="draggable" id="pic3_page16" data-target="target3_page16" style="top:380px;">
+      <img src="https://i.postimg.cc/TwJ7jD0F/Screenshot-2025-11-02-112538.png" class="draggable" id="pic4_page16" data-target="target4_page16" style="top:506px;">
+      <img src="https://i.postimg.cc/x8js61pF/Screenshot-2025-11-02-112600.png" class="draggable" id="pic5_page16" data-target="target5_page16" style="top:-5px;">
+    </div>
+
+   <button class="reset-btn" onclick="resetPage16()">🔁 Reset</button>
+  </div>  
+
+
+   <div class="nav-buttons">
+    <button id="prev" class="arrow-btn">←</button>
+    <button id="next" class="arrow-btn">→</button>
+  </div>
+
+  <div class="page-number" id="pageNum">Trang 1 / 2</div>
+<!-- Nút phóng to toàn màn hình -->
+<button id="fullscreenBtn" class="fullscreen-btn">⛶</button>
+<button id="snapBtn" class="snap-btn">Đáp án 答案</button>
+  </div>
+ 
+</div>
+
+<script>
+  const draggables = document.querySelectorAll(".draggable");
+  document.querySelectorAll(".page").forEach((p, i) => {
+  if (i !== 0) p.classList.add("hidden");
+});
+  const targets = document.querySelectorAll(".target");
+  let originalPositions = {};
+const positions = [-5, 122, 250, 380, 506];
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+    const images = document.querySelectorAll(".right img");
+    images.forEach((img, i) => {
+      img.style.position = "absolute";
+      img.style.top = shuffled[i] + "px";
+      img.style.left = "60px";
+    });
+    
+  // Lưu vị trí ban đầu
+  draggables.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    originalPositions[el.id] = { x: 0, y: 0 };
+  });
+
+  draggables.forEach(el => {
+  // Chuột (máy tính)
+  el.addEventListener("dragstart", dragStart);
+  el.addEventListener("dragend", dragEnd);
+
+ el.addEventListener("touchstart", touchStart);
+  el.addEventListener("touchmove", touchMove);
+  el.addEventListener("touchend", touchEnd);
+});
+
+draggables.forEach(el => {
+  el.addEventListener("mousedown", mouseStart);
+});
+
+let currentDrag = null;
+
+function mouseStart(e) {
+  e.preventDefault();
+  const el = e.target;
+  currentDrag = el;
+
+  el.dataset.originalLeft = el.style.left;
+  el.dataset.originalTop = el.style.top;
+
+  el.dataset.startX = e.clientX - el.offsetLeft;
+  el.dataset.startY = e.clientY - el.offsetTop;
+  el.style.zIndex = 9999;
+
+  document.addEventListener("mousemove", mouseMove);
+  document.addEventListener("mouseup", mouseEnd);
+}
+
+function mouseMove(e) {
+  if (!currentDrag) return;
+  const el = currentDrag;
+  el.style.left = (e.clientX - el.dataset.startX) + "px";
+  el.style.top = (e.clientY - el.dataset.startY) + "px";
+
+  const fingerX = e.clientX;
+  const fingerY = e.clientY;
+
+  document.querySelectorAll('.target').forEach(target => {
+    const rect = target.getBoundingClientRect();
+    if (
+      fingerX >= rect.left - 10 &&
+      fingerX <= rect.right + 10 &&
+      fingerY >= rect.top - 10 &&
+      fingerY <= rect.bottom + 10
+    ) {
+      if (!target.classList.contains("correct")) {
+        target.classList.add("drag-over");
+      }
+    } else {
+      target.classList.remove("drag-over");
+    }
+  });
+}
+
+function mouseEnd(e) {
+  if (!currentDrag) return;
+  const el = currentDrag;
+  el.style.zIndex = 1;
+  let dropped = false;
+
+  const fingerX = e.clientX;
+  const fingerY = e.clientY;
+
+  document.querySelectorAll('.target').forEach(target => {
+    const rect = target.getBoundingClientRect();
+    if (
+      fingerX >= rect.left &&
+      fingerX <= rect.right &&
+      fingerY >= rect.top &&
+      fingerY <= rect.bottom
+    ) {
+      if (el.dataset.target === target.id) {
+        const targetRect = target.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+
+        const offsetX = targetRect.left + targetRect.width / 2 - (elRect.left + elRect.width / 2);
+        const offsetY = targetRect.top + targetRect.height / 2 - (elRect.top + elRect.height / 2);
+
+        el.style.transition = "transform 0.3s";
+        el.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0) scale(1)`;
+
+        setTimeout(() => {
+          el.style.transition = "";
+          el.style.transform = "";
+          el.style.position = "static";
+          target.appendChild(el);
+        }, 250);
+
+        target.classList.add("correct");
+        target.classList.remove("drag-over");
+        dropped = true;
+      } else {
+        target.classList.remove("drag-over");
+      }
+    } else {
+      target.classList.remove("drag-over");
+    }
+  });
+
+  if (!dropped) {
+    el.style.transition = "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    el.style.left = el.dataset.originalLeft;
+    el.style.top = el.dataset.originalTop;
+    setTimeout(() => {
+      el.style.transition = "";
+      el.style.transform = "";
+    }, 250);
+  }
+
+  currentDrag = null;
+  document.removeEventListener("mousemove", mouseMove);
+  document.removeEventListener("mouseup", mouseEnd);
+}
+
+function touchStart(e) {
+  const touch = e.touches[0];
+  const el = e.target;
+
+  // Lưu vị trí ban đầu (để trả về nếu sai)
+  el.dataset.originalLeft = el.style.left;
+  el.dataset.originalTop = el.style.top;
+
+  el.dataset.startX = touch.clientX - el.offsetLeft;
+  el.dataset.startY = touch.clientY - el.offsetTop;
+  el.style.zIndex = 9999;
+}
+
+function touchMove(e) {
+  const touch = e.touches[0];
+  const el = e.target;
+  e.preventDefault();
+
+  // Ảnh di chuyển theo ngón tay
+  el.style.left = (touch.clientX - el.dataset.startX) + "px";
+  el.style.top = (touch.clientY - el.dataset.startY) + "px";
+
+  // 🟠 Lấy tọa độ ngón tay
+  const fingerX = touch.clientX;
+  const fingerY = touch.clientY;
+
+  // Kiểm tra ngón tay đang ở trong vùng target nào → hiệu ứng viền cam
+  document.querySelectorAll('.target').forEach(target => {
+    const rect = target.getBoundingClientRect();
+
+    // Nếu ngón tay đang trong vùng ô target
+    if (
+      fingerX >= rect.left - 10 &&    // cho phép lệch nhẹ (10px)
+      fingerX <= rect.right + 10 &&
+      fingerY >= rect.top - 10 &&
+      fingerY <= rect.bottom + 10
+    ) {
+      if (!target.classList.contains("correct")) {
+  if (!target.classList.contains("drag-over")) {
+    target.style.transition = "border-color 0.15s ease, transform 0.15s ease";
+    target.classList.add("drag-over");
+  }
+}
+    } else {
+      target.classList.remove("drag-over");
+    }
+  });
+}
+
+function touchEnd(e) {
+  const touch = e.changedTouches[0];
+  const el = e.target;
+  el.style.zIndex = 1;
+
+  const fingerX = touch.clientX;
+  const fingerY = touch.clientY;
+  let dropped = false;
+
+  document.querySelectorAll('.target').forEach(target => {
+    const rect = target.getBoundingClientRect();
+
+    if (
+      fingerX >= rect.left &&
+      fingerX <= rect.right &&
+      fingerY >= rect.top &&
+      fingerY <= rect.bottom
+    ) {
+      // ✅ Nếu đúng ô target
+      if (el.dataset.target === target.id) {
+        const targetRect = target.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+
+        const offsetX = targetRect.left + targetRect.width / 2 - (elRect.left + elRect.width / 2);
+        const offsetY = targetRect.top + targetRect.height / 2 - (elRect.top + elRect.height / 2);
+
+        // 🟢 Di chuyển mượt bằng translate3d (GPU render nhanh hơn)
+        el.style.transition = "transform 0.3s";
+        el.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0) scale(1)`;
+
+        // Sau khi hoàn tất di chuyển, gắn ảnh vào ô
+        setTimeout(() => {
+          el.style.transition = "";
+          el.style.transform = "";
+          el.style.position = "static";
+          target.appendChild(el);
+        }, 250);
+
+        target.classList.add("correct");
+        target.classList.remove("drag-over");
+        dropped = true;
+      } else {
+        target.classList.remove("drag-over");
+      }
+    } else {
+      target.classList.remove("drag-over");
+    }
+  });
+
+  // ❌ Nếu không đúng ô → quay về vị trí ban đầu mượt
+  if (!dropped) {
+    el.style.transition = "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    el.style.left = el.dataset.originalLeft;
+    el.style.top = el.dataset.originalTop;
+    setTimeout(() => {
+      el.style.transition = "";
+      el.style.transform = "";
+    }, 250);
+  }
+}
+
+  function dragStart(e) {
+    e.dataTransfer.setData("text/plain", e.target.id);
+    setTimeout(() => e.target.style.visibility = "hidden", 0);
+  }
+
+  function dragEnd(e) {
+    e.target.style.visibility = "visible";
+  }
+
+  function dragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = "move";
+}
+
+  function drop(e) {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData("text/plain");
+    const draggedEl = document.getElementById(draggedId);
+    const targetId = e.target.id;
+
+     targets.forEach(t => t.classList.remove("drag-over"));
+
+    if (draggedEl.dataset.target === targetId) {
+      e.target.appendChild(draggedEl);
+      draggedEl.style.position = "static";
+      e.target.classList.add("correct");
+      draggedEl.draggable = false;
+      draggedEl.style.cursor = "default";
+    } else {
+      // Trả về vị trí ban đầu
+      draggedEl.style.position = "absolute";
+      draggedEl.style.left = originalPositions[draggedEl.id].left;
+      draggedEl.style.top = originalPositions[draggedEl.id].top;
+    }
+  }
+
+  const pages = document.querySelectorAll(".page");
+const nextBtn = document.getElementById("next");
+const prevBtn = document.getElementById("prev");
+const pageNum = document.getElementById("pageNum");
+
+let currentPage = 0;
+showPage(currentPage);
+
+nextBtn.addEventListener("click", () => {
+  if (currentPage < pages.length - 1) {
+    pages[currentPage].classList.add("hidden");
+    currentPage++;
+    showPage(currentPage);
+  }
+});
+
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 0) {
+    pages[currentPage].classList.add("hidden");
+    currentPage--;
+    showPage(currentPage);
+  }
+});
+
+function showPage(index) {
+  pages.forEach((p, i) => {
+    p.classList.remove("active");
+    if (i === index) {
+      p.classList.add("active");
+      p.classList.remove("hidden");
+    }
+  });
+  pageNum.textContent = `Trang ${index + 1} / ${pages.length}`;
+}
+
+ function resetPage1() {
+    const page1 = document.querySelectorAll(".page")[0]; // chọn page 1
+    const draggables1 = page1.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506];
+    
+    // Trộn mảng positions
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+    draggables1.forEach((img, i) => {
+        const rightContainer = page1.querySelector(".right");
+        rightContainer.appendChild(img); // đưa trở về cột bên phải
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px"; // gán vị trí top ngẫu nhiên
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+    const targets1 = page1.querySelectorAll(".target");
+    targets1.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage2() {
+    const page2 = document.querySelectorAll(".page")[1]; // chọn page 2
+    const draggables2 = page2.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; // vị trí top của page 2
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+    draggables2.forEach((img, i) => {
+        const rightContainer = page2.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+    const targets2 = page2.querySelectorAll(".target");
+    targets2.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage3() {
+    const page3 = document.querySelectorAll(".page")[2];
+    const draggables3 = page3.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables3.forEach((img, i) => {
+        const rightContainer = page3.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    const targets3 = page3.querySelectorAll(".target");
+    targets3.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage4() {
+    const page4 = document.querySelectorAll(".page")[3];
+    const draggables4 = page4.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables4.forEach((img, i) => {
+        const rightContainer = page4.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    const targets4 = page4.querySelectorAll(".target");
+    targets4.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage5() {
+    const page5 = document.querySelectorAll(".page")[4];
+    const draggables5 = page5.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables5.forEach((img, i) => {
+        const rightContainer = page5.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets5 = page5.querySelectorAll(".target");
+    targets5.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage6() {
+    const page6 = document.querySelectorAll(".page")[5];
+    const draggables6 = page6.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables6.forEach((img, i) => {
+        const rightContainer = page6.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets6 = page6.querySelectorAll(".target");
+    targets6.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage7() {
+    const page7 = document.querySelectorAll(".page")[6];
+    const draggables7 = page7.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables7.forEach((img, i) => {
+        const rightContainer = page7.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets7 = page7.querySelectorAll(".target");
+    targets7.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage8() {
+    const page8 = document.querySelectorAll(".page")[7];
+    const draggables8 = page8.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables8.forEach((img, i) => {
+        const rightContainer = page8.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets8 = page8.querySelectorAll(".target");
+    targets8.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage9() {
+    const page9 = document.querySelectorAll(".page")[8];
+    const draggables9 = page9.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables9.forEach((img, i) => {
+        const rightContainer = page9.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets9 = page9.querySelectorAll(".target");
+    targets9.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage10() {
+    const page10 = document.querySelectorAll(".page")[9];
+    const draggables10 = page10.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables10.forEach((img, i) => {
+        const rightContainer = page10.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets10 = page10.querySelectorAll(".target");
+    targets10.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage11() {
+    const page11 = document.querySelectorAll(".page")[10];
+    const draggables11 = page11.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables11.forEach((img, i) => {
+        const rightContainer = page11.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets11 = page11.querySelectorAll(".target");
+    targets11.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage12() {
+    const page12 = document.querySelectorAll(".page")[11];
+    const draggables12 = page12.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables12.forEach((img, i) => {
+        const rightContainer = page12.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets12 = page12.querySelectorAll(".target");
+    targets12.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage13() {
+    const page13 = document.querySelectorAll(".page")[12];
+    const draggables13 = page13.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables13.forEach((img, i) => {
+        const rightContainer = page13.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets13 = page13.querySelectorAll(".target");
+    targets13.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage14() {
+    const page14 = document.querySelectorAll(".page")[13];
+    const draggables14 = page14.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables14.forEach((img, i) => {
+        const rightContainer = page14.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets14 = page14.querySelectorAll(".target");
+    targets14.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage15() {
+    const page15 = document.querySelectorAll(".page")[14];
+    const draggables15 = page15.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables15.forEach((img, i) => {
+        const rightContainer = page15.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets15 = page15.querySelectorAll(".target");
+    targets15.forEach(t => t.classList.remove("correct"));
+}
+
+function resetPage16() {
+    const page16 = document.querySelectorAll(".page")[15];
+    const draggables16 = page16.querySelectorAll(".draggable");
+    const positions = [-5, 122, 250, 380, 506]; 
+    const shuffled = positions.sort(() => Math.random() - 0.5);
+
+
+    draggables16.forEach((img, i) => {
+        const rightContainer = page16.querySelector(".right");
+        rightContainer.appendChild(img);
+        img.style.position = "absolute";
+        img.style.top = shuffled[i] + "px";
+        img.style.left = "60px";
+        img.draggable = true;
+        img.style.cursor = "grab";
+    });
+
+
+    
+    const targets16 = page16.querySelectorAll(".target");
+    targets16.forEach(t => t.classList.remove("correct"));
+}
+
+const snapBtn = document.getElementById("snapBtn");
+
+snapBtn.addEventListener("click", () => {
+  const pages = document.querySelectorAll(".page");
+  const currentPage = Array.from(pages).findIndex(p => p.classList.contains("active"));
+  const page = pages[currentPage];
+  const draggables = page.querySelectorAll(".draggable");
+
+  draggables.forEach(img => {
+    const targetId = img.dataset.target;
+    const target = page.querySelector(`#${targetId}`);
+    if (target) {
+      target.appendChild(img);
+      img.style.position = "static";
+      img.style.transform = "";
+      img.draggable = false; // optional: khóa kéo sau khi Snap
+      target.classList.add("correct");
+      target.classList.remove("drag-over");
+    }
+  });
+});
+
+function scaleFlipbook() {
+  const flipbook = document.getElementById('flipbook');
+  if (!flipbook) return;
+
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  const baseWidth = 1000;
+  const baseHeight = 700;
+
+  // Tính tỉ lệ thu phóng
+  const scaleX = screenWidth / baseWidth;
+  const scaleY = screenHeight / baseHeight;
+  const scale = Math.min(scaleX, scaleY);
+
+  flipbook.style.transform = `translateX(-50%) scale(${scale})`;
+
+  // ✅ Scale cả số trang (nếu muốn)
+  const pageNum = document.querySelector('.page-number');
+  if (pageNum) {
+    pageNum.style.transform = `scale(${scale})`;
+    pageNum.style.transformOrigin = 'right bottom';
+  }
+}
+
+// Gọi khi load và thay đổi kích thước
+window.addEventListener('load', scaleFlipbook);
+window.addEventListener('resize', scaleFlipbook);
+window.addEventListener('orientationchange', scaleFlipbook);
+
+// ===== CẢNH BÁO KHI ĐIỆN THOẠI XOAY DỌC =====
+const orientationNotice = document.createElement('div');
+orientationNotice.id = 'orientationNotice';
+orientationNotice.innerHTML = '📱 Quay ngang màn hình<br>để tiếp tục trò chơi';
+document.body.appendChild(orientationNotice);
+
+function checkOrientation() {
+  // Nếu chiều cao > chiều rộng => đang dọc
+  if (window.innerHeight > window.innerWidth) {
+    orientationNotice.style.display = 'flex';
+    document.getElementById('flipbook-container')?.classList.add('disabled');
+    document.body.style.overflow = 'hidden'; // 🚫 khóa cuộn
+    document.body.style.position = 'fixed';  // 🚫 khóa cố định
+} else {
+    orientationNotice.style.display = 'none';
+    document.getElementById('flipbook-container')?.classList.remove('disabled');
+    document.body.style.overflow = ''; // ✅ khôi phục lại
+    document.body.style.position = '';
+}
+}
+
+// Gọi khi load, resize, hoặc xoay thiết bị
+window.addEventListener('load', checkOrientation);
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('orientationchange', checkOrientation);
+
+// ===== TOÀN MÀN HÌNH =====
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+fullscreenBtn.addEventListener('click', () => {
+  const elem = document.documentElement;
+
+  // Nếu chưa fullscreen → bật lên
+  if (!document.fullscreenElement && 
+      !document.webkitFullscreenElement &&
+      !document.mozFullScreenElement) {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { // Safari
+      elem.webkitRequestFullscreen();
+    } else if (elem.mozRequestFullScreen) { // Firefox
+      elem.mozRequestFullScreen();
+    }
+    fullscreenBtn.textContent = "❎";
+  } 
+  // Nếu đang fullscreen → thoát
+  else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    }
+    fullscreenBtn.textContent = "⛶";
+  }
+});
+
+// Cập nhật nút khi thoát bằng nút Back hoặc cử chỉ
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement) {
+    fullscreenBtn.textContent = "⛶";
+  }
+});
+
+
+</script>
+
+</body>
+</html>
